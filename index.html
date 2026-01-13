@@ -284,7 +284,7 @@
                     <input type="number" id="randomItem" min="0" value="1">
                 </div>
             </div>
-            <button id="startScenario">Start Scenario</button>
+            <button id="startScenario" aria-label="Initialize the scenario with configured loot pool">Start Scenario</button>
         </div>
 
         <!-- Active Scenario Section -->
@@ -292,8 +292,8 @@
             <!-- Draw Section -->
             <div class="draw-section">
                 <h2>Draw Loot</h2>
-                <button id="drawButton">Spend Token & Draw Loot</button>
-                <div id="drawResult" class="draw-result empty">
+                <button id="drawButton" aria-label="Spend a loot token and draw a random loot card from the pool">Spend Token & Draw Loot</button>
+                <div id="drawResult" class="draw-result empty" role="status" aria-live="polite" aria-atomic="true">
                     Draw a loot card to see it here
                 </div>
             </div>
@@ -316,8 +316,8 @@
                     <div class="log-empty">No loot drawn yet</div>
                 </div>
                 <div class="button-group" style="margin-top: 20px;">
-                    <button id="clearLog">Clear Log</button>
-                    <button id="resetScenario" class="reset-button">Reset Scenario</button>
+                    <button id="clearLog" aria-label="Clear the loot draw history log">Clear Log</button>
+                    <button id="resetScenario" class="reset-button" aria-label="Reset scenario and return to setup">Reset Scenario</button>
                 </div>
             </div>
         </div>
@@ -328,12 +328,10 @@
         class LootDeck {
             constructor() {
                 this.pool = [];
-                this.drawnCards = [];
             }
 
             initialize(cardCounts) {
                 this.pool = [];
-                this.drawnCards = [];
 
                 // Add cards to pool based on counts
                 for (const [cardType, count] of Object.entries(cardCounts)) {
@@ -360,10 +358,6 @@
                 }
 
                 const card = this.pool.pop();
-                this.drawnCards.push({
-                    card: card,
-                    timestamp: new Date()
-                });
                 return card;
             }
 
@@ -377,10 +371,6 @@
 
             getTotalRemaining() {
                 return this.pool.length;
-            }
-
-            getDrawnCards() {
-                return this.drawnCards;
             }
         }
 
@@ -399,21 +389,59 @@
             }
 
             startScenario() {
-                const cardCounts = {
-                    'Gold (1)': parseInt(document.getElementById('gold1').value) || 0,
-                    'Gold (2)': parseInt(document.getElementById('gold2').value) || 0,
-                    'Gold (3)': parseInt(document.getElementById('gold3').value) || 0,
-                    'Lumber': parseInt(document.getElementById('lumber').value) || 0,
-                    'Metal': parseInt(document.getElementById('metal').value) || 0,
-                    'Hide': parseInt(document.getElementById('hide').value) || 0,
-                    'Axenut': parseInt(document.getElementById('axenut').value) || 0,
-                    'Arrowvine': parseInt(document.getElementById('arrowvine').value) || 0,
-                    'Flamefruit': parseInt(document.getElementById('flamefruit').value) || 0,
-                    'Rockroot': parseInt(document.getElementById('rockroot').value) || 0,
-                    'Snowthistle': parseInt(document.getElementById('snowthistle').value) || 0,
-                    'Corpsecap': parseInt(document.getElementById('corpsecap').value) || 0,
-                    'Random Item': parseInt(document.getElementById('randomItem').value) || 0
+                const getCount = (inputId, label) => {
+                    const input = document.getElementById(inputId);
+                    const rawValue = input.value.trim();
+
+                    // Treat empty input as zero
+                    if (rawValue === '') {
+                        return 0;
+                    }
+
+                    // Ensure the value is a non-negative integer (no signs, no decimals)
+                    if (!/^\d+$/.test(rawValue)) {
+                        alert(label + ' must be a non-negative integer.');
+                        input.focus();
+                        return null;
+                    }
+
+                    const value = parseInt(rawValue, 10);
+                    if (value < 0 || !Number.isFinite(value)) {
+                        alert(label + ' must be a non-negative integer.');
+                        input.focus();
+                        return null;
+                    }
+
+                    return value;
                 };
+
+                const cardCounts = {
+                    'Gold (1)': getCount('gold1', 'Gold (1)'),
+                    'Gold (2)': getCount('gold2', 'Gold (2)'),
+                    'Gold (3)': getCount('gold3', 'Gold (3)'),
+                    'Lumber': getCount('lumber', 'Lumber'),
+                    'Metal': getCount('metal', 'Metal'),
+                    'Hide': getCount('hide', 'Hide'),
+                    'Axenut': getCount('axenut', 'Axenut'),
+                    'Arrowvine': getCount('arrowvine', 'Arrowvine'),
+                    'Flamefruit': getCount('flamefruit', 'Flamefruit'),
+                    'Rockroot': getCount('rockroot', 'Rockroot'),
+                    'Snowthistle': getCount('snowthistle', 'Snowthistle'),
+                    'Corpsecap': getCount('corpsecap', 'Corpsecap'),
+                    'Random Item': getCount('randomItem', 'Random Item')
+                };
+
+                // If any input was invalid, abort starting the scenario
+                if (Object.values(cardCounts).some(value => value === null)) {
+                    return;
+                }
+
+                // Validate that at least one card is configured
+                const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
+                if (totalCards === 0) {
+                    alert('Cannot start scenario with an empty loot pool. Please add at least one card.');
+                    return;
+                }
 
                 this.deck.initialize(cardCounts);
 
@@ -422,7 +450,7 @@
                 document.getElementById('activeSection').classList.remove('hidden');
 
                 this.updatePoolDisplay();
-                this.updateDrawResult('Draw a loot card to see it here', true);
+                this.updateDrawResult('Ready to draw', true);
             }
 
             drawCard() {
