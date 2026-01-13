@@ -469,10 +469,17 @@
                     const count = counts[cardType] || 0;
                     const cardDiv = document.createElement('div');
                     cardDiv.className = 'pool-card' + (count === 0 ? ' empty' : '');
-                    cardDiv.innerHTML = `
-                        <div class="pool-card-name">${cardType}</div>
-                        <div class="pool-card-count">${count}</div>
-                    `;
+                    
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'pool-card-name';
+                    nameDiv.textContent = cardType;
+                    
+                    const countDiv = document.createElement('div');
+                    countDiv.className = 'pool-card-count';
+                    countDiv.textContent = count;
+                    
+                    cardDiv.appendChild(nameDiv);
+                    cardDiv.appendChild(countDiv);
                     poolDisplay.appendChild(cardDiv);
                 }
 
