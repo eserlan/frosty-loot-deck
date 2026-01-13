@@ -312,14 +312,8 @@
         <div id="drawError" class="error-message"></div>
 
         <div class="draw-controls">
-            <div class="token-input-group">
-                <button class="secondary" id="btnDecTokens" aria-label="Decrease token count">-</button>
-                <label for="inputTokens" class="token-label">Tokens</label>
-                <input type="number" id="inputTokens" value="1" min="1" step="1" aria-label="Number of tokens to draw">
-                <button class="secondary" id="btnIncTokens" aria-label="Increase token count">+</button>
-            </div>
-
-            <button id="btnDraw" class="big-button">Draw Loot</button>
+            <!-- Token input removed as per requirements (always draw 1) -->
+            <button id="btnDraw" class="big-button">Draw 1 Loot Card</button>
         </div>
 
         <div class="remaining-pool-display">
@@ -358,9 +352,12 @@
         'gold_1': { id: 'gold_1', label: '1 Gold', payload: { gold: 1 } },
         'gold_2': { id: 'gold_2', label: '2 Gold', payload: { gold: 2 } },
         'gold_3': { id: 'gold_3', label: '3 Gold', payload: { gold: 3 } },
-        'lumber': { id: 'lumber', label: 'Lumber', payload: { lumber: 1 } },
-        'metal': { id: 'metal', label: 'Metal', payload: { metal: 1 } },
-        'hide': { id: 'hide', label: 'Hide', payload: { hide: 1 } },
+        'lumber_1': { id: 'lumber_1', label: '+1 Lumber', payload: { lumber: 1 } },
+        'lumber_2': { id: 'lumber_2', label: '+2 Lumber', payload: { lumber: 2 } },
+        'metal_1': { id: 'metal_1', label: '+1 Metal', payload: { metal: 1 } },
+        'metal_2': { id: 'metal_2', label: '+2 Metal', payload: { metal: 2 } },
+        'hide_1': { id: 'hide_1', label: '+1 Hide', payload: { hide: 1 } },
+        'hide_2': { id: 'hide_2', label: '+2 Hide', payload: { hide: 2 } },
         'arrowvine': { id: 'arrowvine', label: 'Arrowvine', payload: { arrowvine: 1 } },
         'axenut': { id: 'axenut', label: 'Axenut', payload: { axenut: 1 } },
         'corpsecap': { id: 'corpsecap', label: 'Corpsecap', payload: { corpsecap: 1 } },
@@ -370,10 +367,66 @@
         'random_item': { id: 'random_item', label: 'Random Item', payload: {} }
     };
 
+    // Definitions of the physical supply of cards available to build the deck
+    const SUPPLY_DECK = {
+        'money': {
+            label: 'Money Cards',
+            cards: [
+                ...Array(1).fill('gold_1'),
+                ...Array(6).fill('gold_2'),
+                ...Array(2).fill('gold_3')
+            ] // Total 9
+        },
+        'lumber': {
+            label: 'Lumber',
+            cards: [
+                ...Array(2).fill('lumber_1'),
+                ...Array(6).fill('lumber_2')
+            ] // Total 8
+        },
+        'metal': {
+            label: 'Metal',
+            cards: [
+                ...Array(2).fill('metal_1'),
+                ...Array(6).fill('metal_2')
+            ] // Total 8
+        },
+        'hide': {
+            label: 'Hide',
+            cards: [
+                ...Array(2).fill('hide_1'),
+                ...Array(5).fill('hide_2')
+            ] // Total 7
+        },
+        // Herbs and Items are 1-to-1 mappings but we still define them for consistent UI handling if needed,
+        // though for now the UI will handle "singles" separately.
+        'herbs': ['arrowvine', 'axenut', 'corpsecap', 'flamefruit', 'rockroot', 'snowthistle'],
+        'items': ['random_item']
+    };
+
+    // UI Groups for the builder
+    // 'random' type means we draw from a shuffled supply deck
+    // 'direct' type means we just add the specific card
+    const BUILDER_GROUPS = [
+        { id: 'money', label: 'Money Cards', type: 'random', max: 9 },
+        { id: 'lumber', label: 'Lumber', type: 'random', max: 8 },
+        { id: 'metal', label: 'Metal', type: 'random', max: 8 },
+        { id: 'hide', label: 'Hide', type: 'random', max: 7 },
+        { id: 'arrowvine', label: 'Arrowvine', type: 'direct' },
+        { id: 'axenut', label: 'Axenut', type: 'direct' },
+        { id: 'corpsecap', label: 'Corpsecap', type: 'direct' },
+        { id: 'flamefruit', label: 'Flamefruit', type: 'direct' },
+        { id: 'rockroot', label: 'Rockroot', type: 'direct' },
+        { id: 'snowthistle', label: 'Snowthistle', type: 'direct' },
+        { id: 'random_item', label: 'Random Item', type: 'direct' }
+    ];
+
     // Preset for Sample Demo Pool
     const SAMPLE_PRESET = {
-        'gold_1': 8, 'gold_2': 4, 'gold_3': 2,
-        'lumber': 4, 'metal': 4, 'hide': 4,
+        'money': 4,
+        'lumber': 2,
+        'metal': 2,
+        'hide': 2,
         'arrowvine': 1, 'axenut': 1, 'corpsecap': 1,
         'flamefruit': 1, 'rockroot': 1, 'snowthistle': 1,
         'random_item': 1
@@ -385,15 +438,15 @@
             this.pool = [];
             this.log = [];
 
-            // Initialize composition with 0 for all templates
-            Object.keys(LOOT_TEMPLATES).forEach(id => {
-                this.composition[id] = 0;
+            // Initialize composition with 0 for all builder groups
+            BUILDER_GROUPS.forEach(group => {
+                this.composition[group.id] = 0;
             });
         }
 
-        setCount(templateId, count) {
+        setCount(groupId, count) {
             if (count < 0) return;
-            this.composition[templateId] = parseInt(count) || 0;
+            this.composition[groupId] = parseInt(count) || 0;
         }
 
         getConfiguredSize() {
@@ -403,9 +456,35 @@
         buildPool() {
             this.pool = [];
             this.log = [];
-            for (const [id, count] of Object.entries(this.composition)) {
-                for (let i = 0; i < count; i++) {
-                    this.pool.push(id);
+
+            for (const [groupId, count] of Object.entries(this.composition)) {
+                if (count <= 0) continue;
+
+                const groupDef = BUILDER_GROUPS.find(g => g.id === groupId);
+                if (!groupDef) continue;
+
+                if (groupDef.type === 'direct') {
+                    // Direct mapping: groupId matches a template ID
+                    for (let i = 0; i < count; i++) {
+                        this.pool.push(groupId);
+                    }
+                } else if (groupDef.type === 'random') {
+                    // Random draw from supply
+                    const supply = [...SUPPLY_DECK[groupId].cards]; // copy
+
+                    if (count > supply.length) {
+                        alert(`Warning: You requested ${count} ${groupDef.label}, but only ${supply.length} are available. Using all available.`);
+                        // Add all available
+                        this.pool.push(...supply);
+                    } else {
+                        // Shuffle supply
+                        for (let i = supply.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [supply[i], supply[j]] = [supply[j], supply[i]];
+                        }
+                        // Take top N
+                        this.pool.push(...supply.slice(0, count));
+                    }
                 }
             }
         }
@@ -438,12 +517,34 @@
         }
 
         getRemainingCounts() {
+            // Aggregate counts by display group (family)
             const counts = {};
-            // Initialize with 0 for all known templates so they appear in list
-            Object.keys(LOOT_TEMPLATES).forEach(id => counts[id] = 0);
+
+            // Initialize counts for all builder groups
+            BUILDER_GROUPS.forEach(group => {
+                counts[group.label] = 0;
+            });
 
             for (const id of this.pool) {
-                counts[id] = (counts[id] || 0) + 1;
+                // Find which group this card belongs to
+                // First check if it's a direct match (like herbs)
+                let group = BUILDER_GROUPS.find(g => g.id === id);
+
+                if (!group) {
+                    // If not direct, check if it belongs to a supply deck (e.g. gold_1 in 'money')
+                    const supplyEntry = Object.entries(SUPPLY_DECK).find(([key, val]) => val.cards.includes(id));
+                    if (supplyEntry) {
+                        const [supplyKey] = supplyEntry;
+                        group = BUILDER_GROUPS.find(g => g.id === supplyKey);
+                    }
+                }
+
+                if (group) {
+                    counts[group.label] = (counts[group.label] || 0) + 1;
+                } else {
+                    // Fallback for unknown items
+                    counts[id] = (counts[id] || 0) + 1;
+                }
             }
             return counts;
         }
@@ -481,7 +582,7 @@
     const remainingCountDisplay = document.getElementById('remainingCountDisplay');
     const statsTableBody = document.getElementById('statsTableBody');
     const drawLogList = document.getElementById('drawLogList');
-    const inputTokens = document.getElementById('inputTokens');
+    // inputTokens removed
     const drawError = document.getElementById('drawError');
 
     // Initialization
@@ -517,32 +618,23 @@
         document.getElementById('btnResetSession').addEventListener('click', () => {
             if (confirm("Are you sure you want to reset the session? Current pool and history will be lost.")) {
                 app.resetSession();
-                inputTokens.value = 1;
+                // inputTokens reset removed
                 switchToBuilderView();
             }
-        });
-
-        document.getElementById('btnIncTokens').addEventListener('click', () => {
-            inputTokens.value = parseInt(inputTokens.value || 0) + 1;
-        });
-
-        document.getElementById('btnDecTokens').addEventListener('click', () => {
-            const val = parseInt(inputTokens.value || 0);
-            if (val > 1) inputTokens.value = val - 1;
         });
     }
 
     // Builder Functions
     function renderBuilder() {
         templateGrid.innerHTML = '';
-        Object.values(LOOT_TEMPLATES).forEach(tmpl => {
+        BUILDER_GROUPS.forEach(group => {
             const div = document.createElement('div');
             div.className = 'template-item';
             
             const label = document.createElement('label');
-            const inputId = `in_${tmpl.id}`;
+            const inputId = `in_${group.id}`;
             label.htmlFor = inputId;
-            label.textContent = tmpl.label;
+            label.textContent = group.label;
 
             const input = document.createElement('input');
             input.type = 'number';
@@ -550,7 +642,14 @@
             input.min = '0';
             input.step = '1';
             input.value = '0';
-            input.dataset.id = String(tmpl.id);
+            input.dataset.id = String(group.id);
+
+            // If there's a max limit (for supply decks), we could enforce it here,
+            // but the logic handles it gracefully by taking all available.
+            // Let's set the max attribute though for UI hint.
+            if (group.max) {
+                input.max = group.max;
+            }
 
             div.appendChild(label);
             div.appendChild(input);
@@ -559,7 +658,7 @@
             // Bind input change
             input.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value) || 0;
-                app.setCount(tmpl.id, val);
+                app.setCount(group.id, val);
                 updateConfiguredSize();
             });
         });
@@ -569,7 +668,7 @@
         const inputs = templateGrid.querySelectorAll('input');
         inputs.forEach(input => {
             const id = input.dataset.id;
-            input.value = app.composition[id];
+            input.value = app.composition[id] || 0;
         });
     }
 
@@ -581,7 +680,6 @@
     function switchToActiveView() {
         builderView.classList.add('hidden');
         activeView.classList.remove('hidden');
-        inputTokens.value = 1;
         drawError.classList.remove('visible');
         updateActiveDisplay();
     }
@@ -601,13 +699,13 @@
         statsTableBody.innerHTML = '';
 
         // Only display loot templates that currently have a remaining count greater than zero.
-        Object.entries(counts).forEach(([id, count]) => {
+        Object.entries(counts).forEach(([label, count]) => {
             if (count > 0) {
                 const tr = document.createElement('tr');
                 const tdLabel = document.createElement('td');
                 const tdCount = document.createElement('td');
                 
-                tdLabel.textContent = LOOT_TEMPLATES[id].label;
+                tdLabel.textContent = label;
                 tdCount.textContent = String(count);
                 
                 tr.appendChild(tdLabel);
@@ -631,8 +729,8 @@
 
         // Update Draw Button State
         const btnDraw = document.getElementById('btnDraw');
-        const tokensToSpend = parseInt(inputTokens.value) || 1;
-        if (total === 0 || tokensToSpend > total) {
+        // Always drawing 1, so simply check if pool is empty
+        if (total === 0) {
             btnDraw.disabled = true;
         } else {
             btnDraw.disabled = false;
@@ -668,13 +766,8 @@
     }
 
     function handleDraw() {
-        const n = parseInt(inputTokens.value);
-        if (isNaN(n) || n < 1) {
-            showError("Please enter a valid number of tokens.");
-            return;
-        }
-
-        const result = app.draw(n);
+        // Always draw 1
+        const result = app.draw(1);
         if (!result.success) {
             showError(result.error);
         } else {
@@ -690,16 +783,6 @@
             drawError.classList.remove('visible');
         }, 3000);
     }
-
-    // Input validation for tokens
-    inputTokens.addEventListener('input', () => {
-        // Only update when the active view/app state is ready
-        if (!app || !app.pool) {
-            return;
-        }
-        // Re-evaluate button state
-        updateActiveDisplay();
-    });
 
     // Start
     init();
