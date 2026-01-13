@@ -161,12 +161,12 @@
 
         .stepper-btn:hover:not(:disabled) {
             background-color: var(--primary-color);
-            color: #000;
+            color: var(--bg-color);
         }
 
         .stepper-btn:disabled {
             background-color: transparent;
-            color: #444;
+            color: var(--text-secondary);
             cursor: default;
         }
 
@@ -685,26 +685,37 @@
             const div = document.createElement('div');
             div.className = 'template-item';
             
+            const labelId = `label_${group.id}`;
             const label = document.createElement('label');
             label.textContent = group.label;
+            label.id = labelId;
 
             // Stepper Control
             const stepperDiv = document.createElement('div');
             stepperDiv.className = 'stepper-control';
+            stepperDiv.setAttribute('role', 'group');
+            stepperDiv.setAttribute('aria-labelledby', labelId);
 
             const btnDec = document.createElement('button');
             btnDec.className = 'stepper-btn';
+            btnDec.type = 'button';
             btnDec.textContent = '-';
             btnDec.disabled = true; // Initially 0
+            btnDec.setAttribute('aria-label', `Decrease ${group.label}`);
 
             const display = document.createElement('span');
             display.className = 'stepper-value';
             display.textContent = '0';
             display.dataset.id = String(group.id);
+            display.tabIndex = 0;
+            display.role = 'status';
+            display.setAttribute('aria-label', `${group.label} count`);
 
             const btnInc = document.createElement('button');
             btnInc.className = 'stepper-btn';
+            btnInc.type = 'button';
             btnInc.textContent = '+';
+            btnInc.setAttribute('aria-label', `Increase ${group.label}`);
 
             // Event Handlers
             btnDec.addEventListener('click', () => {
@@ -738,6 +749,17 @@
                 }
             });
 
+            // Keyboard navigation for display
+            display.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if (!btnInc.disabled) btnInc.click();
+                } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    if (!btnDec.disabled) btnDec.click();
+                }
+            });
+
             stepperDiv.appendChild(btnDec);
             stepperDiv.appendChild(display);
             stepperDiv.appendChild(btnInc);
@@ -750,6 +772,11 @@
 
     function refreshBuilderInputs() {
         const displays = templateGrid.querySelectorAll('.stepper-value');
+
+        // Create lookup map to avoid O(n) search in loop
+        const groupMap = new Map();
+        BUILDER_GROUPS.forEach(g => groupMap.set(String(g.id), g));
+
         displays.forEach(display => {
             const id = display.dataset.id;
             const newVal = app.composition[id] || 0;
@@ -767,7 +794,7 @@
 
                 if (btnInc) {
                     // Check max
-                    const group = BUILDER_GROUPS.find(g => String(g.id) === id);
+                    const group = groupMap.get(id);
                     if (group && group.max) {
                         btnInc.disabled = (newVal >= group.max);
                     } else {
