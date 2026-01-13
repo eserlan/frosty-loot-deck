@@ -696,6 +696,7 @@
             const div = document.createElement('div');
             div.className = 'template-item';
             
+            const labelId = `label_${group.id}`;
             const label = document.createElement('label');
             label.textContent = group.label;
             label.htmlFor = `stepper-${group.id}`;
@@ -708,6 +709,7 @@
             const btnDec = document.createElement('button');
             btnDec.type = 'button';
             btnDec.className = 'stepper-btn';
+            btnDec.type = 'button';
             btnDec.textContent = '-';
             btnDec.disabled = true; // Initially 0
             btnDec.setAttribute('aria-label', `Decrease ${group.label}`);
@@ -724,6 +726,7 @@
             const btnInc = document.createElement('button');
             btnInc.type = 'button';
             btnInc.className = 'stepper-btn';
+            btnInc.type = 'button';
             btnInc.textContent = '+';
             btnInc.setAttribute('aria-label', `Increase ${group.label}`);
 
@@ -780,6 +783,17 @@
                 }
             });
 
+            // Keyboard navigation for display
+            display.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if (!btnInc.disabled) btnInc.click();
+                } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    if (!btnDec.disabled) btnDec.click();
+                }
+            });
+
             stepperDiv.appendChild(btnDec);
             stepperDiv.appendChild(display);
             stepperDiv.appendChild(btnInc);
@@ -792,6 +806,11 @@
 
     function refreshBuilderInputs() {
         const displays = templateGrid.querySelectorAll('.stepper-value');
+
+        // Create lookup map to avoid O(n) search in loop
+        const groupMap = new Map();
+        BUILDER_GROUPS.forEach(g => groupMap.set(String(g.id), g));
+
         displays.forEach(display => {
             const id = display.dataset.id;
             const newVal = app.composition[id] || 0;
