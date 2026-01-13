@@ -133,6 +133,51 @@
             text-align: center;
         }
 
+        .stepper-control {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 2px;
+        }
+
+        .stepper-btn {
+            background-color: var(--surface-alt);
+            color: var(--text-primary);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .stepper-btn:hover:not(:disabled) {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+
+        .stepper-btn:disabled {
+            background-color: transparent;
+            color: #444;
+            cursor: default;
+        }
+
+        .stepper-value {
+            width: 40px;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            user-select: none;
+        }
+
         .build-stats {
             text-align: center;
             margin-top: calc(var(--spacing-unit) * 2);
@@ -352,12 +397,12 @@
         'gold_1': { id: 'gold_1', label: '1 Gold', payload: { gold: 1 } },
         'gold_2': { id: 'gold_2', label: '2 Gold', payload: { gold: 2 } },
         'gold_3': { id: 'gold_3', label: '3 Gold', payload: { gold: 3 } },
-        'lumber_1': { id: 'lumber_1', label: '+1 Lumber', payload: { lumber: 1 } },
-        'lumber_2': { id: 'lumber_2', label: '+2 Lumber', payload: { lumber: 2 } },
-        'metal_1': { id: 'metal_1', label: '+1 Metal', payload: { metal: 1 } },
-        'metal_2': { id: 'metal_2', label: '+2 Metal', payload: { metal: 2 } },
-        'hide_1': { id: 'hide_1', label: '+1 Hide', payload: { hide: 1 } },
-        'hide_2': { id: 'hide_2', label: '+2 Hide', payload: { hide: 2 } },
+        'lumber_1': { id: 'lumber_1', label: '1 Lumber', payload: { lumber: 1 } },
+        'lumber_2': { id: 'lumber_2', label: '2 Lumber', payload: { lumber: 2 } },
+        'metal_1': { id: 'metal_1', label: '1 Metal', payload: { metal: 1 } },
+        'metal_2': { id: 'metal_2', label: '2 Metal', payload: { metal: 2 } },
+        'hide_1': { id: 'hide_1', label: '1 Hide', payload: { hide: 1 } },
+        'hide_2': { id: 'hide_2', label: '2 Hide', payload: { hide: 2 } },
         'arrowvine': { id: 'arrowvine', label: 'Arrowvine', payload: { arrowvine: 1 } },
         'axenut': { id: 'axenut', label: 'Axenut', payload: { axenut: 1 } },
         'corpsecap': { id: 'corpsecap', label: 'Corpsecap', payload: { corpsecap: 1 } },
@@ -641,43 +686,95 @@
             div.className = 'template-item';
             
             const label = document.createElement('label');
-            const inputId = `in_${group.id}`;
-            label.htmlFor = inputId;
             label.textContent = group.label;
 
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.id = inputId;
-            input.min = '0';
-            input.step = '1';
-            input.value = '0';
-            input.dataset.id = String(group.id);
+            // Stepper Control
+            const stepperDiv = document.createElement('div');
+            stepperDiv.className = 'stepper-control';
 
-            // If there's a max limit (for supply decks), we could enforce it here,
-            // but the logic handles it gracefully by taking all available.
-            // Let's set the max attribute though for UI hint.
-            if (group.max) {
-                input.max = group.max;
-            }
+            const btnDec = document.createElement('button');
+            btnDec.className = 'stepper-btn';
+            btnDec.textContent = '-';
+            btnDec.disabled = true; // Initially 0
+
+            const display = document.createElement('span');
+            display.className = 'stepper-value';
+            display.textContent = '0';
+            display.dataset.id = String(group.id);
+
+            const btnInc = document.createElement('button');
+            btnInc.className = 'stepper-btn';
+            btnInc.textContent = '+';
+
+            // Event Handlers
+            btnDec.addEventListener('click', () => {
+                let currentVal = app.composition[group.id] || 0;
+                if (currentVal > 0) {
+                    currentVal--;
+                    app.setCount(group.id, currentVal);
+                    display.textContent = currentVal;
+                    updateConfiguredSize();
+
+                    if (currentVal === 0) btnDec.disabled = true;
+                    btnInc.disabled = false;
+                }
+            });
+
+            btnInc.addEventListener('click', () => {
+                let currentVal = app.composition[group.id] || 0;
+                // If there's a max, strictly enforce it for UI
+                if (group.max && currentVal >= group.max) {
+                    return;
+                }
+
+                currentVal++;
+                app.setCount(group.id, currentVal);
+                display.textContent = currentVal;
+                updateConfiguredSize();
+
+                btnDec.disabled = false;
+                if (group.max && currentVal >= group.max) {
+                    btnInc.disabled = true;
+                }
+            });
+
+            stepperDiv.appendChild(btnDec);
+            stepperDiv.appendChild(display);
+            stepperDiv.appendChild(btnInc);
 
             div.appendChild(label);
-            div.appendChild(input);
+            div.appendChild(stepperDiv);
             templateGrid.appendChild(div);
-
-            // Bind input change
-            input.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value) || 0;
-                app.setCount(group.id, val);
-                updateConfiguredSize();
-            });
         });
     }
 
     function refreshBuilderInputs() {
-        const inputs = templateGrid.querySelectorAll('input');
-        inputs.forEach(input => {
-            const id = input.dataset.id;
-            input.value = app.composition[id] || 0;
+        const displays = templateGrid.querySelectorAll('.stepper-value');
+        displays.forEach(display => {
+            const id = display.dataset.id;
+            const newVal = app.composition[id] || 0;
+            display.textContent = newVal;
+
+            // Also update button states (disable/enable)
+            const parent = display.parentElement;
+            if (parent) {
+                const btnDec = parent.querySelector('.stepper-btn:first-child');
+                const btnInc = parent.querySelector('.stepper-btn:last-child');
+
+                if (btnDec) {
+                    btnDec.disabled = (newVal <= 0);
+                }
+
+                if (btnInc) {
+                    // Check max
+                    const group = BUILDER_GROUPS.find(g => String(g.id) === id);
+                    if (group && group.max) {
+                        btnInc.disabled = (newVal >= group.max);
+                    } else {
+                        btnInc.disabled = false;
+                    }
+                }
+            }
         });
     }
 
