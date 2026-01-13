@@ -254,6 +254,28 @@
         }
         .error-message.visible { display: block; }
 
+        .centered-controls {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .centered-controls-alt {
+            text-align: center;
+            margin-top: 32px;
+        }
+
+        .token-label {
+            margin-left: 8px;
+        }
+
+        .remaining-highlight {
+            color: var(--secondary-color);
+        }
+
+        .centered-text {
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
@@ -278,7 +300,7 @@
             Configured Pool Size: <span id="configuredSizeDisplay">0</span>
         </div>
 
-        <div style="text-align: center; margin-top: 24px;">
+        <div class="centered-controls">
             <button id="btnBuildPool" class="big-button">Build & Start Session</button>
         </div>
     </div>
@@ -291,20 +313,20 @@
 
         <div class="draw-controls">
             <div class="token-input-group">
-                <button class="secondary" id="btnDecTokens">-</button>
-                <input type="number" id="inputTokens" value="1" min="1">
-                <button class="secondary" id="btnIncTokens">+</button>
-                <span style="margin-left: 8px;">Tokens</span>
+                <button class="secondary" id="btnDecTokens" aria-label="Decrease token count">-</button>
+                <label for="inputTokens" class="token-label">Tokens</label>
+                <input type="number" id="inputTokens" value="1" min="1" step="1" aria-label="Number of tokens to draw">
+                <button class="secondary" id="btnIncTokens" aria-label="Increase token count">+</button>
             </div>
 
             <button id="btnDraw" class="big-button">Draw Loot</button>
         </div>
 
         <div class="remaining-pool-display">
-            Cards Remaining: <strong id="remainingCountDisplay" style="color: var(--secondary-color);">0</strong>
+            Cards Remaining: <strong id="remainingCountDisplay" class="remaining-highlight">0</strong>
         </div>
 
-        <div class="stats-table-container">
+        <div class="stats-table-container" role="status" aria-live="polite" aria-label="Remaining loot cards">
             <table>
                 <thead>
                     <tr>
@@ -318,12 +340,12 @@
             </table>
         </div>
 
-        <h3>Draw History</h3>
+        <h2>Draw History</h2>
         <ul id="drawLogList" class="log-list">
             <li class="empty-message">No draws yet.</li>
         </ul>
 
-        <div style="text-align: center; margin-top: 32px;">
+        <div class="centered-controls-alt">
             <button id="btnResetSession" class="danger">Reset Session</button>
         </div>
     </div>
@@ -389,7 +411,9 @@
         }
 
         draw(n) {
-            if (n <= 0) throw new Error("Must draw at least 1 token");
+            if (n <= 0) {
+                return { success: false, error: "Must draw at least 1 token" };
+            }
             if (n > this.pool.length) {
                 return { success: false, error: `Cannot draw ${n} cards. Only ${this.pool.length} remaining.` };
             }
@@ -418,7 +442,7 @@
             // Initialize with 0 for all known templates so they appear in list
             Object.keys(LOOT_TEMPLATES).forEach(id => counts[id] = 0);
 
-            for(const id of this.pool) {
+            for (const id of this.pool) {
                 counts[id] = (counts[id] || 0) + 1;
             }
             return counts;
@@ -427,7 +451,6 @@
         resetSession() {
             this.pool = [];
             this.log = [];
-            // Reset input tokens default
         }
 
         clearCounts() {
@@ -492,7 +515,7 @@
         document.getElementById('btnDraw').addEventListener('click', handleDraw);
 
         document.getElementById('btnResetSession').addEventListener('click', () => {
-            if(confirm("Are you sure you want to reset the session? Current pool and history will be lost.")) {
+            if (confirm("Are you sure you want to reset the session? Current pool and history will be lost.")) {
                 app.resetSession();
                 inputTokens.value = 1;
                 switchToBuilderView();
@@ -515,14 +538,25 @@
         Object.values(LOOT_TEMPLATES).forEach(tmpl => {
             const div = document.createElement('div');
             div.className = 'template-item';
-            div.innerHTML = `
-                <label for="in_${tmpl.id}">${tmpl.label}</label>
-                <input type="number" id="in_${tmpl.id}" min="0" value="0" data-id="${tmpl.id}">
-            `;
+            
+            const label = document.createElement('label');
+            const inputId = `in_${tmpl.id}`;
+            label.htmlFor = inputId;
+            label.textContent = tmpl.label;
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = inputId;
+            input.min = '0';
+            input.step = '1';
+            input.value = '0';
+            input.dataset.id = String(tmpl.id);
+
+            div.appendChild(label);
+            div.appendChild(input);
             templateGrid.appendChild(div);
 
             // Bind input change
-            const input = div.querySelector('input');
             input.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value) || 0;
                 app.setCount(tmpl.id, val);
@@ -566,24 +600,30 @@
         const counts = app.getRemainingCounts();
         statsTableBody.innerHTML = '';
 
-        // Filter to only show items that exist in the original composition (optional, or show all)
-        // Showing all active types is better.
+        // Only display loot templates that currently have a remaining count greater than zero.
         Object.entries(counts).forEach(([id, count]) => {
-            // Only show rows if count > 0 or if it was part of the original composition?
-            // Spec says "Remaining loot counts table (per template)".
-            // Better to show all templates or just those with count > 0?
-            // To prevent UI jumping, let's show all templates defined in LOOT_TEMPLATES that had > 0 start count?
-            // Actually, showing all from LOOT_TEMPLATES is safest but long.
-            // Let's show only those where current count > 0.
             if (count > 0) {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${LOOT_TEMPLATES[id].label}</td><td>${count}</td>`;
+                const tdLabel = document.createElement('td');
+                const tdCount = document.createElement('td');
+                
+                tdLabel.textContent = LOOT_TEMPLATES[id].label;
+                tdCount.textContent = String(count);
+                
+                tr.appendChild(tdLabel);
+                tr.appendChild(tdCount);
                 statsTableBody.appendChild(tr);
             }
         });
 
         if (total === 0) {
-             statsTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center">Pool is empty</td></tr>';
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 2;
+            td.className = 'centered-text';
+            td.textContent = 'Pool is empty';
+            tr.appendChild(td);
+            statsTableBody.appendChild(tr);
         }
 
         // Update Log
@@ -602,7 +642,10 @@
     function renderLog() {
         drawLogList.innerHTML = '';
         if (app.log.length === 0) {
-            drawLogList.innerHTML = '<li class="empty-message">No draws yet.</li>';
+            const li = document.createElement('li');
+            li.className = 'empty-message';
+            li.textContent = 'No draws yet.';
+            drawLogList.appendChild(li);
             return;
         }
 
@@ -610,13 +653,16 @@
             const li = document.createElement('li');
             li.className = 'log-entry';
 
-            const timeStr = new Date(entry.timestamp).toLocaleTimeString();
-            const cardsStr = entry.draws.map(id => LOOT_TEMPLATES[id].label).join(', ');
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = new Date(entry.timestamp).toLocaleTimeString();
 
-            li.innerHTML = `
-                <span class="log-time">${timeStr}</span>
-                <span class="log-content">${cardsStr}</span>
-            `;
+            const contentSpan = document.createElement('span');
+            contentSpan.className = 'log-content';
+            contentSpan.textContent = entry.draws.map(id => LOOT_TEMPLATES[id].label).join(', ');
+
+            li.appendChild(timeSpan);
+            li.appendChild(contentSpan);
             drawLogList.appendChild(li);
         });
     }
@@ -647,6 +693,10 @@
 
     // Input validation for tokens
     inputTokens.addEventListener('input', () => {
+        // Only update when the active view/app state is ready
+        if (!app || !app.pool) {
+            return;
+        }
         // Re-evaluate button state
         updateActiveDisplay();
     });
