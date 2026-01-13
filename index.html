@@ -370,7 +370,7 @@
     // Definitions of the physical supply of cards available to build the deck
     const SUPPLY_DECK = {
         'money': {
-            label: 'Money Cards',
+            label: 'Money',
             cards: [
                 ...Array(1).fill('gold_1'),
                 ...Array(6).fill('gold_2'),
@@ -400,15 +400,21 @@
         },
         // Herbs and Items are 1-to-1 mappings but we still define them for consistent UI handling if needed,
         // though for now the UI will handle "singles" separately.
-        'herbs': ['arrowvine', 'axenut', 'corpsecap', 'flamefruit', 'rockroot', 'snowthistle'],
-        'items': ['random_item']
+        'herbs': {
+            label: 'Herbs',
+            cards: ['arrowvine', 'axenut', 'corpsecap', 'flamefruit', 'rockroot', 'snowthistle']
+        },
+        'items': {
+            label: 'Items',
+            cards: ['random_item']
+        }
     };
 
     // UI Groups for the builder
     // 'random' type means we draw from a shuffled supply deck
     // 'direct' type means we just add the specific card
     const BUILDER_GROUPS = [
-        { id: 'money', label: 'Money Cards', type: 'random', max: 9 },
+        { id: 'money', label: 'Money', type: 'random', max: 9 },
         { id: 'lumber', label: 'Lumber', type: 'random', max: 8 },
         { id: 'metal', label: 'Metal', type: 'random', max: 8 },
         { id: 'hide', label: 'Hide', type: 'random', max: 7 },
@@ -456,6 +462,7 @@
         buildPool() {
             this.pool = [];
             this.log = [];
+            const warnings = [];
 
             for (const [groupId, count] of Object.entries(this.composition)) {
                 if (count <= 0) continue;
@@ -472,21 +479,23 @@
                     // Random draw from supply
                     const supply = [...SUPPLY_DECK[groupId].cards]; // copy
 
+                    // Shuffle supply
+                    for (let i = supply.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [supply[i], supply[j]] = [supply[j], supply[i]];
+                    }
+
                     if (count > supply.length) {
-                        alert(`Warning: You requested ${count} ${groupDef.label}, but only ${supply.length} are available. Using all available.`);
-                        // Add all available
+                        warnings.push(`Warning: You requested ${count} ${groupDef.label}, but only ${supply.length} are available. Using all available.`);
+                        // Add all available (already shuffled)
                         this.pool.push(...supply);
                     } else {
-                        // Shuffle supply
-                        for (let i = supply.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [supply[i], supply[j]] = [supply[j], supply[i]];
-                        }
                         // Take top N
                         this.pool.push(...supply.slice(0, count));
                     }
                 }
             }
+            return { success: true, warnings: warnings };
         }
 
         draw(n) {
@@ -608,7 +617,10 @@
                 alert("Please add at least one card to the pool.");
                 return;
             }
-            app.buildPool();
+            const result = app.buildPool();
+            if (result.warnings && result.warnings.length > 0) {
+                alert(result.warnings.join('\n'));
+            }
             switchToActiveView();
         });
 
