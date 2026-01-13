@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frosthaven Loot Deck</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .setup-section, .draw-section, .pool-section, .log-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+
+        .card-setup {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card-input {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-input label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .card-input input {
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+
+        .card-input input:focus {
+            outline: 2px solid #4CAF50;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .reset-button {
+            background: #f44336;
+        }
+
+        .reset-button:hover {
+            background: #da190b;
+        }
+
+        .pool-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .pool-card {
+            background: rgba(255,255,255,0.15);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .pool-card-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .pool-card-count {
+            font-size: 2em;
+            color: #4CAF50;
+        }
+
+        .pool-card.empty .pool-card-count {
+            color: #f44336;
+        }
+
+        .draw-result {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            border: 3px solid #4CAF50;
+        }
+
+        .draw-result.empty {
+            border-color: rgba(255,255,255,0.2);
+            font-size: 1em;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .log-entries {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .log-entry {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .log-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .log-empty {
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .card-setup {
+                grid-template-columns: 1fr;
+            }
+
+            .pool-display {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>❄️ Frosthaven Loot Deck</h1>
+
+        <!-- Setup Section -->
+        <div id="setupSection" class="setup-section">
+            <h2>Setup Loot Pool</h2>
+            <div class="card-setup">
+                <div class="card-input">
+                    <label for="gold1">Gold (1):</label>
+                    <input type="number" id="gold1" min="0" value="12">
+                </div>
+                <div class="card-input">
+                    <label for="gold2">Gold (2):</label>
+                    <input type="number" id="gold2" min="0" value="6">
+                </div>
+                <div class="card-input">
+                    <label for="gold3">Gold (3):</label>
+                    <input type="number" id="gold3" min="0" value="2">
+                </div>
+                <div class="card-input">
+                    <label for="lumber">Lumber:</label>
+                    <input type="number" id="lumber" min="0" value="6">
+                </div>
+                <div class="card-input">
+                    <label for="metal">Metal:</label>
+                    <input type="number" id="metal" min="0" value="6">
+                </div>
+                <div class="card-input">
+                    <label for="hide">Hide:</label>
+                    <input type="number" id="hide" min="0" value="6">
+                </div>
+                <div class="card-input">
+                    <label for="axenut">Axenut:</label>
+                    <input type="number" id="axenut" min="0" value="1">
+                </div>
+                <div class="card-input">
+                    <label for="arrowvine">Arrowvine:</label>
+                    <input type="number" id="arrowvine" min="0" value="1">
+                </div>
+                <div class="card-input">
+                    <label for="flamefruit">Flamefruit:</label>
+                    <input type="number" id="flamefruit" min="0" value="1">
+                </div>
+                <div class="card-input">
+                    <label for="rockroot">Rockroot:</label>
+                    <input type="number" id="rockroot" min="0" value="1">
+                </div>
+                <div class="card-input">
+                    <label for="snowthistle">Snowthistle:</label>
+                    <input type="number" id="snowthistle" min="0" value="1">
+                </div>
+                <div class="card-input">
+                    <label for="corpsecap">Corpsecap:</label>
+                    <input type="number" id="corpsecap" min="0" value="1">
+                </div>
+                <div class="card-input">
+                    <label for="randomItem">Random Item:</label>
+                    <input type="number" id="randomItem" min="0" value="1">
+                </div>
+            </div>
+            <button id="startScenario" aria-label="Initialize the scenario with configured loot pool">Start Scenario</button>
+        </div>
+
+        <!-- Active Scenario Section -->
+        <div id="activeSection" class="hidden">
+            <!-- Draw Section -->
+            <div class="draw-section">
+                <h2>Draw Loot</h2>
+                <button id="drawButton" aria-label="Spend a loot token and draw a random loot card from the pool">Spend Token & Draw Loot</button>
+                <div id="drawResult" class="draw-result empty" role="status" aria-live="polite">
+                    Draw a loot card to see it here
+                </div>
+            </div>
+
+            <!-- Pool Section -->
+            <div class="pool-section">
+                <h2>Remaining Loot Pool</h2>
+                <div id="poolDisplay" class="pool-display">
+                    <!-- Pool cards will be inserted here -->
+                </div>
+                <div class="status-message">
+                    Total cards remaining: <span id="totalCards">0</span>
+                </div>
+            </div>
+
+            <!-- Log Section -->
+            <div class="log-section">
+                <h2>Loot History</h2>
+                <div id="logEntries" class="log-entries">
+                    <div class="log-empty">No loot drawn yet</div>
+                </div>
+                <div class="button-group" style="margin-top: 20px;">
+                    <button id="clearLog" aria-label="Clear the loot draw history log">Clear Log</button>
+                    <button id="resetScenario" class="reset-button" aria-label="Reset scenario and return to setup">Reset Scenario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Loot deck management
+        class LootDeck {
+            constructor() {
+                this.pool = [];
+            }
+
+            initialize(cardCounts) {
+                this.pool = [];
+
+                // Add cards to pool based on counts
+                for (const [cardType, count] of Object.entries(cardCounts)) {
+                    for (let i = 0; i < count; i++) {
+                        this.pool.push(cardType);
+                    }
+                }
+
+                // Shuffle the pool
+                this.shuffle();
+            }
+
+            shuffle() {
+                // Fisher-Yates shuffle
+                for (let i = this.pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.pool[i], this.pool[j]] = [this.pool[j], this.pool[i]];
+                }
+            }
+
+            draw() {
+                if (this.pool.length === 0) {
+                    return null;
+                }
+
+                const card = this.pool.pop();
+                return card;
+            }
+
+            getRemainingCounts() {
+                const counts = {};
+                for (const card of this.pool) {
+                    counts[card] = (counts[card] || 0) + 1;
+                }
+                return counts;
+            }
+
+            getTotalRemaining() {
+                return this.pool.length;
+            }
+        }
+
+        // UI Controller
+        class UIController {
+            constructor() {
+                this.deck = new LootDeck();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('startScenario').addEventListener('click', () => this.startScenario());
+                document.getElementById('drawButton').addEventListener('click', () => this.drawCard());
+                document.getElementById('clearLog').addEventListener('click', () => this.clearLog());
+                document.getElementById('resetScenario').addEventListener('click', () => this.resetScenario());
+            }
+
+            startScenario() {
+                const getCount = (inputId, label) => {
+                    const input = document.getElementById(inputId);
+                    const rawValue = input.value.trim();
+
+                    // Treat empty input as zero
+                    if (rawValue === '') {
+                        return 0;
+                    }
+
+                    // Ensure the value is a non-negative integer (no signs, no decimals)
+                    if (!/^\d+$/.test(rawValue)) {
+                        alert(label + ' must be a non-negative integer.');
+                        input.focus();
+                        return null;
+                    }
+
+                    return parseInt(rawValue, 10);
+                };
+
+                const cardCounts = {
+                    'Gold (1)': getCount('gold1', 'Gold (1)'),
+                    'Gold (2)': getCount('gold2', 'Gold (2)'),
+                    'Gold (3)': getCount('gold3', 'Gold (3)'),
+                    'Lumber': getCount('lumber', 'Lumber'),
+                    'Metal': getCount('metal', 'Metal'),
+                    'Hide': getCount('hide', 'Hide'),
+                    'Axenut': getCount('axenut', 'Axenut'),
+                    'Arrowvine': getCount('arrowvine', 'Arrowvine'),
+                    'Flamefruit': getCount('flamefruit', 'Flamefruit'),
+                    'Rockroot': getCount('rockroot', 'Rockroot'),
+                    'Snowthistle': getCount('snowthistle', 'Snowthistle'),
+                    'Corpsecap': getCount('corpsecap', 'Corpsecap'),
+                    'Random Item': getCount('randomItem', 'Random Item')
+                };
+
+                // If any input was invalid, abort starting the scenario
+                if (Object.values(cardCounts).some(value => value === null)) {
+                    return;
+                }
+
+                // Validate that at least one card is configured
+                const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
+                if (totalCards === 0) {
+                    alert('Cannot start scenario with an empty loot pool. Please add at least one card.');
+                    return;
+                }
+
+                this.deck.initialize(cardCounts);
+
+                // Hide setup, show active sections
+                document.getElementById('setupSection').classList.add('hidden');
+                document.getElementById('activeSection').classList.remove('hidden');
+
+                this.updatePoolDisplay();
+                this.updateDrawResult('Ready to draw', true);
+            }
+
+            drawCard() {
+                const card = this.deck.draw();
+
+                if (card === null) {
+                    this.updateDrawResult('No cards left in the loot pool!', true);
+                    return;
+                }
+
+                this.updateDrawResult(card, false);
+                this.updatePoolDisplay();
+                this.addLogEntry(card);
+            }
+
+            updateDrawResult(text, isEmpty) {
+                const resultDiv = document.getElementById('drawResult');
+                resultDiv.textContent = text;
+                
+                if (isEmpty) {
+                    resultDiv.classList.add('empty');
+                } else {
+                    resultDiv.classList.remove('empty');
+                }
+            }
+
+            updatePoolDisplay() {
+                const poolDisplay = document.getElementById('poolDisplay');
+                const counts = this.deck.getRemainingCounts();
+                const totalCards = this.deck.getTotalRemaining();
+
+                // Define card order for display
+                const cardOrder = [
+                    'Gold (1)', 'Gold (2)', 'Gold (3)',
+                    'Lumber', 'Metal', 'Hide',
+                    'Axenut', 'Arrowvine', 'Flamefruit',
+                    'Rockroot', 'Snowthistle', 'Corpsecap',
+                    'Random Item'
+                ];
+
+                poolDisplay.innerHTML = '';
+
+                for (const cardType of cardOrder) {
+                    const count = counts[cardType] || 0;
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'pool-card' + (count === 0 ? ' empty' : '');
+                    
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'pool-card-name';
+                    nameDiv.textContent = cardType;
+                    
+                    const countDiv = document.createElement('div');
+                    countDiv.className = 'pool-card-count';
+                    countDiv.textContent = count;
+                    
+                    cardDiv.appendChild(nameDiv);
+                    cardDiv.appendChild(countDiv);
+                    poolDisplay.appendChild(cardDiv);
+                }
+
+                document.getElementById('totalCards').textContent = totalCards;
+
+                // Disable draw button if no cards left
+                document.getElementById('drawButton').disabled = totalCards === 0;
+            }
+
+            addLogEntry(card) {
+                const logEntries = document.getElementById('logEntries');
+                
+                // Remove empty message if it exists
+                const emptyMessage = logEntries.querySelector('.log-empty');
+                if (emptyMessage) {
+                    emptyMessage.remove();
+                }
+
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                const timestamp = new Date().toLocaleTimeString();
+                entry.textContent = `${timestamp} - Drew: ${card}`;
+
+                // Insert at the beginning (most recent first)
+                logEntries.insertBefore(entry, logEntries.firstChild);
+            }
+
+            clearLog() {
+                const logEntries = document.getElementById('logEntries');
+                logEntries.innerHTML = '<div class="log-empty">No loot drawn yet</div>';
+            }
+
+            resetScenario() {
+                if (confirm('Are you sure you want to reset the scenario? This will clear all drawn loot and return to setup.')) {
+                    document.getElementById('setupSection').classList.remove('hidden');
+                    document.getElementById('activeSection').classList.add('hidden');
+                    this.clearLog();
+                    this.deck = new LootDeck();
+                }
+            }
+        }
+
+        // Initialize the app
+        const app = new UIController();
+    </script>
+</body>
+</html>
