@@ -405,7 +405,7 @@
 
     // UI Groups for the builder
     const BUILDER_GROUPS = [
-        { id: 'money', label: 'Money Cards', type: 'random', max: 9 },
+        { id: 'money', label: 'Money', type: 'random', max: 9 },
         { id: 'lumber', label: 'Lumber', type: 'random', max: 8 },
         { id: 'metal', label: 'Metal', type: 'random', max: 8 },
         { id: 'hide', label: 'Hide', type: 'random', max: 7 },
@@ -453,6 +453,7 @@
         buildPool() {
             this.pool = [];
             this.log = [];
+            const warnings = [];
 
             for (const [groupId, count] of Object.entries(this.composition)) {
                 if (count <= 0) continue;
@@ -475,6 +476,12 @@
                         [supply[i], supply[j]] = [supply[j], supply[i]];
                     }
 
+                    // Shuffle supply
+                    for (let i = supply.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [supply[i], supply[j]] = [supply[j], supply[i]];
+                    }
+
                     if (count > supply.length) {
                         showError(`Warning: You requested ${count} ${groupDef.label}, but only ${supply.length} are available. Using all available.`);
                         // Add all available (now shuffled)
@@ -485,6 +492,7 @@
                     }
                 }
             }
+            return { success: true, warnings: warnings };
         }
 
         draw(n) {
@@ -606,7 +614,10 @@
                 alert("Please add at least one card to the pool.");
                 return;
             }
-            app.buildPool();
+            const result = app.buildPool();
+            if (result.warnings && result.warnings.length > 0) {
+                alert(result.warnings.join('\n'));
+            }
             switchToActiveView();
         });
 
