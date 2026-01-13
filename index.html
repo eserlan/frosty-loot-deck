@@ -3,548 +3,657 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frosthaven Loot Deck</title>
+    <title>Loot Deck Helper</title>
     <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --surface-alt: #2d2d2d;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --error-color: #cf6679;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border-color: #333;
+            --spacing-unit: 8px;
+        }
+
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: #fff;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding: 20px;
+            padding: calc(var(--spacing-unit) * 2);
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
         }
 
-        h1 {
+        h1, h2 {
+            margin-bottom: calc(var(--spacing-unit) * 2);
             text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
-        .setup-section, .draw-section, .pool-section, .log-section {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            border-bottom: 2px solid rgba(255,255,255,0.3);
-            padding-bottom: 10px;
-        }
-
-        .card-setup {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .card-input {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .card-input label {
-            margin-bottom: 5px;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
-
-        .card-input input {
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            background: rgba(255,255,255,0.9);
-            color: #333;
-        }
-
-        .card-input input:focus {
-            outline: 2px solid #4CAF50;
-        }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.5rem; color: var(--text-secondary); }
 
         button {
-            background: #4CAF50;
-            color: white;
+            background-color: var(--primary-color);
+            color: #000;
             border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: all 0.3s;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 1rem;
             font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            touch-action: manipulation;
         }
 
-        button:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
+        button:hover:not(:disabled) {
+            background-color: #a370f7;
         }
 
         button:disabled {
-            background: #666;
+            background-color: #444;
+            color: #888;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .button-group {
+        button.secondary {
+            background-color: var(--surface-alt);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background-color: #3d3d3d;
+        }
+
+        button.danger {
+            background-color: #cf6679;
+            color: #000;
+        }
+
+        .section {
+            background-color: var(--surface-color);
+            padding: calc(var(--spacing-unit) * 3);
+            border-radius: 8px;
+            margin-bottom: calc(var(--spacing-unit) * 3);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .hidden { display: none !important; }
+
+        /* Builder Styles */
+        .controls-row {
             display: flex;
-            gap: 15px;
+            gap: var(--spacing-unit);
             flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: calc(var(--spacing-unit) * 3);
         }
 
-        .reset-button {
-            background: #f44336;
-        }
-
-        .reset-button:hover {
-            background: #da190b;
-        }
-
-        .pool-display {
+        .template-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: calc(var(--spacing-unit) * 2);
+            margin-bottom: calc(var(--spacing-unit) * 3);
         }
 
-        .pool-card {
-            background: rgba(255,255,255,0.15);
-            padding: 15px;
-            border-radius: 10px;
+        .template-item {
+            background-color: var(--surface-alt);
+            padding: calc(var(--spacing-unit) * 2);
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .template-item label {
+            font-weight: 500;
+        }
+
+        .template-item input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-size: 1rem;
             text-align: center;
-            border: 2px solid rgba(255,255,255,0.2);
         }
 
-        .pool-card-name {
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .pool-card-count {
-            font-size: 2em;
-            color: #4CAF50;
-        }
-
-        .pool-card.empty .pool-card-count {
-            color: #f44336;
-        }
-
-        .draw-result {
-            background: rgba(255,255,255,0.2);
-            padding: 20px;
-            border-radius: 10px;
+        .build-stats {
             text-align: center;
-            margin-top: 20px;
-            min-height: 80px;
+            margin-top: calc(var(--spacing-unit) * 2);
+            font-size: 1.1rem;
+            color: var(--secondary-color);
+        }
+
+        /* Active View Styles */
+        .draw-controls {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--spacing-unit) * 2);
+            align-items: center;
+            margin-bottom: calc(var(--spacing-unit) * 3);
+        }
+
+        .token-input-group {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 1.5em;
-            font-weight: bold;
-            border: 3px solid #4CAF50;
+            gap: var(--spacing-unit);
         }
 
-        .draw-result.empty {
-            border-color: rgba(255,255,255,0.2);
-            font-size: 1em;
-            color: rgba(255,255,255,0.5);
+        .token-input-group input {
+            width: 80px;
+            padding: 12px;
+            font-size: 1.2rem;
+            text-align: center;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 4px;
         }
 
-        .log-entries {
-            max-height: 300px;
+        .big-button {
+            width: 100%;
+            max-width: 300px;
+            padding: 20px;
+            font-size: 1.2rem;
+        }
+
+        .remaining-pool-display {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: var(--spacing-unit);
+        }
+
+        .stats-table-container {
+            overflow-x: auto;
+            margin-bottom: calc(var(--spacing-unit) * 3);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--surface-alt);
+            font-weight: 600;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        .log-list {
+            list-style: none;
+            max-height: 400px;
             overflow-y: auto;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-color);
         }
 
         .log-entry {
-            padding: 10px;
-            margin-bottom: 8px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 5px;
-            border-left: 4px solid #4CAF50;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .log-entry:last-child {
-            margin-bottom: 0;
+        .log-entry:last-child { border-bottom: none; }
+
+        .log-time {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-right: var(--spacing-unit);
         }
 
-        .log-empty {
-            text-align: center;
-            color: rgba(255,255,255,0.5);
+        .log-content {
+            flex-grow: 1;
+            text-align: right;
+            font-weight: 500;
+            color: var(--secondary-color);
+        }
+
+        .empty-message {
             padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
         }
 
-        .hidden {
+        .error-message {
+            background-color: var(--error-color);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            text-align: center;
             display: none;
         }
+        .error-message.visible { display: block; }
 
-        .status-message {
-            text-align: center;
-            padding: 15px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2em;
-            }
-
-            .card-setup {
-                grid-template-columns: 1fr;
-            }
-
-            .pool-display {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>❄️ Frosthaven Loot Deck</h1>
 
-        <!-- Setup Section -->
-        <div id="setupSection" class="setup-section">
-            <h2>Setup Loot Pool</h2>
-            <div class="card-setup">
-                <div class="card-input">
-                    <label for="gold1">Gold (1):</label>
-                    <input type="number" id="gold1" min="0" value="12">
-                </div>
-                <div class="card-input">
-                    <label for="gold2">Gold (2):</label>
-                    <input type="number" id="gold2" min="0" value="6">
-                </div>
-                <div class="card-input">
-                    <label for="gold3">Gold (3):</label>
-                    <input type="number" id="gold3" min="0" value="2">
-                </div>
-                <div class="card-input">
-                    <label for="lumber">Lumber:</label>
-                    <input type="number" id="lumber" min="0" value="6">
-                </div>
-                <div class="card-input">
-                    <label for="metal">Metal:</label>
-                    <input type="number" id="metal" min="0" value="6">
-                </div>
-                <div class="card-input">
-                    <label for="hide">Hide:</label>
-                    <input type="number" id="hide" min="0" value="6">
-                </div>
-                <div class="card-input">
-                    <label for="axenut">Axenut:</label>
-                    <input type="number" id="axenut" min="0" value="1">
-                </div>
-                <div class="card-input">
-                    <label for="arrowvine">Arrowvine:</label>
-                    <input type="number" id="arrowvine" min="0" value="1">
-                </div>
-                <div class="card-input">
-                    <label for="flamefruit">Flamefruit:</label>
-                    <input type="number" id="flamefruit" min="0" value="1">
-                </div>
-                <div class="card-input">
-                    <label for="rockroot">Rockroot:</label>
-                    <input type="number" id="rockroot" min="0" value="1">
-                </div>
-                <div class="card-input">
-                    <label for="snowthistle">Snowthistle:</label>
-                    <input type="number" id="snowthistle" min="0" value="1">
-                </div>
-                <div class="card-input">
-                    <label for="corpsecap">Corpsecap:</label>
-                    <input type="number" id="corpsecap" min="0" value="1">
-                </div>
-                <div class="card-input">
-                    <label for="randomItem">Random Item:</label>
-                    <input type="number" id="randomItem" min="0" value="1">
-                </div>
-            </div>
-            <button id="startScenario" aria-label="Initialize the scenario with configured loot pool">Start Scenario</button>
+<div class="container">
+    <h1>Loot Deck Helper</h1>
+
+    <!-- BUILDER VIEW -->
+    <div id="builderView" class="section">
+        <h2>Build Loot Pool</h2>
+
+        <div class="controls-row">
+            <button class="secondary" id="btnPresetBlank">Clear Counts</button>
+            <button class="secondary" id="btnPresetSample">Sample Demo Pool</button>
         </div>
 
-        <!-- Active Scenario Section -->
-        <div id="activeSection" class="hidden">
-            <!-- Draw Section -->
-            <div class="draw-section">
-                <h2>Draw Loot</h2>
-                <button id="drawButton" aria-label="Spend a loot token and draw a random loot card from the pool">Spend Token & Draw Loot</button>
-                <div id="drawResult" class="draw-result empty" role="status" aria-live="polite">
-                    Draw a loot card to see it here
-                </div>
-            </div>
+        <div id="templateGrid" class="template-grid">
+            <!-- Template Inputs injected here -->
+        </div>
 
-            <!-- Pool Section -->
-            <div class="pool-section">
-                <h2>Remaining Loot Pool</h2>
-                <div id="poolDisplay" class="pool-display">
-                    <!-- Pool cards will be inserted here -->
-                </div>
-                <div class="status-message">
-                    Total cards remaining: <span id="totalCards">0</span>
-                </div>
-            </div>
+        <div class="build-stats">
+            Configured Pool Size: <span id="configuredSizeDisplay">0</span>
+        </div>
 
-            <!-- Log Section -->
-            <div class="log-section">
-                <h2>Loot History</h2>
-                <div id="logEntries" class="log-entries">
-                    <div class="log-empty">No loot drawn yet</div>
-                </div>
-                <div class="button-group" style="margin-top: 20px;">
-                    <button id="clearLog" aria-label="Clear the loot draw history log">Clear Log</button>
-                    <button id="resetScenario" class="reset-button" aria-label="Reset scenario and return to setup">Reset Scenario</button>
-                </div>
-            </div>
+        <div style="text-align: center; margin-top: 24px;">
+            <button id="btnBuildPool" class="big-button">Build & Start Session</button>
         </div>
     </div>
 
-    <script>
-        // Loot deck management
-        class LootDeck {
-            constructor() {
-                this.pool = [];
-            }
+    <!-- ACTIVE VIEW -->
+    <div id="activeView" class="section hidden">
+        <h2>Active Session</h2>
 
-            initialize(cardCounts) {
-                this.pool = [];
+        <div id="drawError" class="error-message"></div>
 
-                // Add cards to pool based on counts
-                for (const [cardType, count] of Object.entries(cardCounts)) {
-                    for (let i = 0; i < count; i++) {
-                        this.pool.push(cardType);
-                    }
-                }
+        <div class="draw-controls">
+            <div class="token-input-group">
+                <button class="secondary" id="btnDecTokens">-</button>
+                <input type="number" id="inputTokens" value="1" min="1">
+                <button class="secondary" id="btnIncTokens">+</button>
+                <span style="margin-left: 8px;">Tokens</span>
+            </div>
 
-                // Shuffle the pool
-                this.shuffle();
-            }
+            <button id="btnDraw" class="big-button">Draw Loot</button>
+        </div>
 
-            shuffle() {
-                // Fisher-Yates shuffle
-                for (let i = this.pool.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [this.pool[i], this.pool[j]] = [this.pool[j], this.pool[i]];
-                }
-            }
+        <div class="remaining-pool-display">
+            Cards Remaining: <strong id="remainingCountDisplay" style="color: var(--secondary-color);">0</strong>
+        </div>
 
-            draw() {
-                if (this.pool.length === 0) {
-                    return null;
-                }
+        <div class="stats-table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Card Type</th>
+                        <th>Remaining</th>
+                    </tr>
+                </thead>
+                <tbody id="statsTableBody">
+                    <!-- Rows injected here -->
+                </tbody>
+            </table>
+        </div>
 
-                const card = this.pool.pop();
-                return card;
-            }
+        <h3>Draw History</h3>
+        <ul id="drawLogList" class="log-list">
+            <li class="empty-message">No draws yet.</li>
+        </ul>
 
-            getRemainingCounts() {
-                const counts = {};
-                for (const card of this.pool) {
-                    counts[card] = (counts[card] || 0) + 1;
-                }
-                return counts;
-            }
+        <div style="text-align: center; margin-top: 32px;">
+            <button id="btnResetSession" class="danger">Reset Session</button>
+        </div>
+    </div>
+</div>
 
-            getTotalRemaining() {
-                return this.pool.length;
-            }
+<script>
+    // --- DATA MODEL & LOGIC (Embedded) ---
+
+    const LOOT_TEMPLATES = {
+        'gold_1': { id: 'gold_1', label: '1 Gold', payload: { gold: 1 } },
+        'gold_2': { id: 'gold_2', label: '2 Gold', payload: { gold: 2 } },
+        'gold_3': { id: 'gold_3', label: '3 Gold', payload: { gold: 3 } },
+        'lumber': { id: 'lumber', label: 'Lumber', payload: { lumber: 1 } },
+        'metal': { id: 'metal', label: 'Metal', payload: { metal: 1 } },
+        'hide': { id: 'hide', label: 'Hide', payload: { hide: 1 } },
+        'arrowvine': { id: 'arrowvine', label: 'Arrowvine', payload: { arrowvine: 1 } },
+        'axenut': { id: 'axenut', label: 'Axenut', payload: { axenut: 1 } },
+        'corpsecap': { id: 'corpsecap', label: 'Corpsecap', payload: { corpsecap: 1 } },
+        'flamefruit': { id: 'flamefruit', label: 'Flamefruit', payload: { flamefruit: 1 } },
+        'rockroot': { id: 'rockroot', label: 'Rockroot', payload: { rockroot: 1 } },
+        'snowthistle': { id: 'snowthistle', label: 'Snowthistle', payload: { snowthistle: 1 } },
+        'random_item': { id: 'random_item', label: 'Random Item', payload: {} }
+    };
+
+    // Preset for Sample Demo Pool
+    const SAMPLE_PRESET = {
+        'gold_1': 8, 'gold_2': 4, 'gold_3': 2,
+        'lumber': 4, 'metal': 4, 'hide': 4,
+        'arrowvine': 1, 'axenut': 1, 'corpsecap': 1,
+        'flamefruit': 1, 'rockroot': 1, 'snowthistle': 1,
+        'random_item': 1
+    };
+
+    class LootLogic {
+        constructor() {
+            this.composition = {};
+            this.pool = [];
+            this.log = [];
+
+            // Initialize composition with 0 for all templates
+            Object.keys(LOOT_TEMPLATES).forEach(id => {
+                this.composition[id] = 0;
+            });
         }
 
-        // UI Controller
-        class UIController {
-            constructor() {
-                this.deck = new LootDeck();
-                this.setupEventListeners();
-            }
+        setCount(templateId, count) {
+            if (count < 0) return;
+            this.composition[templateId] = parseInt(count) || 0;
+        }
 
-            setupEventListeners() {
-                document.getElementById('startScenario').addEventListener('click', () => this.startScenario());
-                document.getElementById('drawButton').addEventListener('click', () => this.drawCard());
-                document.getElementById('clearLog').addEventListener('click', () => this.clearLog());
-                document.getElementById('resetScenario').addEventListener('click', () => this.resetScenario());
-            }
+        getConfiguredSize() {
+            return Object.values(this.composition).reduce((sum, c) => sum + c, 0);
+        }
 
-            startScenario() {
-                const getCount = (inputId, label) => {
-                    const input = document.getElementById(inputId);
-                    const rawValue = input.value.trim();
-
-                    // Treat empty input as zero
-                    if (rawValue === '') {
-                        return 0;
-                    }
-
-                    // Ensure the value is a non-negative integer (no signs, no decimals)
-                    if (!/^\d+$/.test(rawValue)) {
-                        alert(label + ' must be a non-negative integer.');
-                        input.focus();
-                        return null;
-                    }
-
-                    return parseInt(rawValue, 10);
-                };
-
-                const cardCounts = {
-                    'Gold (1)': getCount('gold1', 'Gold (1)'),
-                    'Gold (2)': getCount('gold2', 'Gold (2)'),
-                    'Gold (3)': getCount('gold3', 'Gold (3)'),
-                    'Lumber': getCount('lumber', 'Lumber'),
-                    'Metal': getCount('metal', 'Metal'),
-                    'Hide': getCount('hide', 'Hide'),
-                    'Axenut': getCount('axenut', 'Axenut'),
-                    'Arrowvine': getCount('arrowvine', 'Arrowvine'),
-                    'Flamefruit': getCount('flamefruit', 'Flamefruit'),
-                    'Rockroot': getCount('rockroot', 'Rockroot'),
-                    'Snowthistle': getCount('snowthistle', 'Snowthistle'),
-                    'Corpsecap': getCount('corpsecap', 'Corpsecap'),
-                    'Random Item': getCount('randomItem', 'Random Item')
-                };
-
-                // If any input was invalid, abort starting the scenario
-                if (Object.values(cardCounts).some(value => value === null)) {
-                    return;
-                }
-
-                // Validate that at least one card is configured
-                const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
-                if (totalCards === 0) {
-                    alert('Cannot start scenario with an empty loot pool. Please add at least one card.');
-                    return;
-                }
-
-                this.deck.initialize(cardCounts);
-
-                // Hide setup, show active sections
-                document.getElementById('setupSection').classList.add('hidden');
-                document.getElementById('activeSection').classList.remove('hidden');
-
-                this.updatePoolDisplay();
-                this.updateDrawResult('Ready to draw', true);
-            }
-
-            drawCard() {
-                const card = this.deck.draw();
-
-                if (card === null) {
-                    this.updateDrawResult('No cards left in the loot pool!', true);
-                    return;
-                }
-
-                this.updateDrawResult(card, false);
-                this.updatePoolDisplay();
-                this.addLogEntry(card);
-            }
-
-            updateDrawResult(text, isEmpty) {
-                const resultDiv = document.getElementById('drawResult');
-                resultDiv.textContent = text;
-                
-                if (isEmpty) {
-                    resultDiv.classList.add('empty');
-                } else {
-                    resultDiv.classList.remove('empty');
-                }
-            }
-
-            updatePoolDisplay() {
-                const poolDisplay = document.getElementById('poolDisplay');
-                const counts = this.deck.getRemainingCounts();
-                const totalCards = this.deck.getTotalRemaining();
-
-                // Define card order for display
-                const cardOrder = [
-                    'Gold (1)', 'Gold (2)', 'Gold (3)',
-                    'Lumber', 'Metal', 'Hide',
-                    'Axenut', 'Arrowvine', 'Flamefruit',
-                    'Rockroot', 'Snowthistle', 'Corpsecap',
-                    'Random Item'
-                ];
-
-                poolDisplay.innerHTML = '';
-
-                for (const cardType of cardOrder) {
-                    const count = counts[cardType] || 0;
-                    const cardDiv = document.createElement('div');
-                    cardDiv.className = 'pool-card' + (count === 0 ? ' empty' : '');
-                    
-                    const nameDiv = document.createElement('div');
-                    nameDiv.className = 'pool-card-name';
-                    nameDiv.textContent = cardType;
-                    
-                    const countDiv = document.createElement('div');
-                    countDiv.className = 'pool-card-count';
-                    countDiv.textContent = count;
-                    
-                    cardDiv.appendChild(nameDiv);
-                    cardDiv.appendChild(countDiv);
-                    poolDisplay.appendChild(cardDiv);
-                }
-
-                document.getElementById('totalCards').textContent = totalCards;
-
-                // Disable draw button if no cards left
-                document.getElementById('drawButton').disabled = totalCards === 0;
-            }
-
-            addLogEntry(card) {
-                const logEntries = document.getElementById('logEntries');
-                
-                // Remove empty message if it exists
-                const emptyMessage = logEntries.querySelector('.log-empty');
-                if (emptyMessage) {
-                    emptyMessage.remove();
-                }
-
-                const entry = document.createElement('div');
-                entry.className = 'log-entry';
-                const timestamp = new Date().toLocaleTimeString();
-                entry.textContent = `${timestamp} - Drew: ${card}`;
-
-                // Insert at the beginning (most recent first)
-                logEntries.insertBefore(entry, logEntries.firstChild);
-            }
-
-            clearLog() {
-                const logEntries = document.getElementById('logEntries');
-                logEntries.innerHTML = '<div class="log-empty">No loot drawn yet</div>';
-            }
-
-            resetScenario() {
-                if (confirm('Are you sure you want to reset the scenario? This will clear all drawn loot and return to setup.')) {
-                    document.getElementById('setupSection').classList.remove('hidden');
-                    document.getElementById('activeSection').classList.add('hidden');
-                    this.clearLog();
-                    this.deck = new LootDeck();
+        buildPool() {
+            this.pool = [];
+            this.log = [];
+            for (const [id, count] of Object.entries(this.composition)) {
+                for (let i = 0; i < count; i++) {
+                    this.pool.push(id);
                 }
             }
         }
 
-        // Initialize the app
-        const app = new UIController();
-    </script>
+        draw(n) {
+            if (n <= 0) throw new Error("Must draw at least 1 token");
+            if (n > this.pool.length) {
+                return { success: false, error: `Cannot draw ${n} cards. Only ${this.pool.length} remaining.` };
+            }
+
+            const drawnIds = [];
+            for (let i = 0; i < n; i++) {
+                const index = Math.floor(Math.random() * this.pool.length);
+                const [item] = this.pool.splice(index, 1);
+                drawnIds.push(item);
+            }
+
+            this.log.unshift({
+                timestamp: Date.now(),
+                draws: drawnIds
+            });
+
+            return { success: true, draws: drawnIds };
+        }
+
+        getRemainingCount(templateId) {
+            return this.pool.filter(id => id === templateId).length;
+        }
+
+        getRemainingCounts() {
+            const counts = {};
+            // Initialize with 0 for all known templates so they appear in list
+            Object.keys(LOOT_TEMPLATES).forEach(id => counts[id] = 0);
+
+            for(const id of this.pool) {
+                counts[id] = (counts[id] || 0) + 1;
+            }
+            return counts;
+        }
+
+        resetSession() {
+            this.pool = [];
+            this.log = [];
+            // Reset input tokens default
+        }
+
+        clearCounts() {
+            Object.keys(this.composition).forEach(id => {
+                this.composition[id] = 0;
+            });
+        }
+
+        applyPreset(preset) {
+            this.clearCounts();
+            Object.entries(preset).forEach(([id, count]) => {
+                if (this.composition.hasOwnProperty(id)) {
+                    this.composition[id] = count;
+                }
+            });
+        }
+    }
+
+    // --- UI CONTROLLER ---
+
+    const app = new LootLogic();
+
+    // DOM Elements
+    const builderView = document.getElementById('builderView');
+    const activeView = document.getElementById('activeView');
+    const templateGrid = document.getElementById('templateGrid');
+    const configuredSizeDisplay = document.getElementById('configuredSizeDisplay');
+    const remainingCountDisplay = document.getElementById('remainingCountDisplay');
+    const statsTableBody = document.getElementById('statsTableBody');
+    const drawLogList = document.getElementById('drawLogList');
+    const inputTokens = document.getElementById('inputTokens');
+    const drawError = document.getElementById('drawError');
+
+    // Initialization
+    function init() {
+        renderBuilder();
+        updateConfiguredSize();
+
+        // Builder Event Listeners
+        document.getElementById('btnPresetBlank').addEventListener('click', () => {
+            app.clearCounts();
+            refreshBuilderInputs();
+            updateConfiguredSize();
+        });
+
+        document.getElementById('btnPresetSample').addEventListener('click', () => {
+            app.applyPreset(SAMPLE_PRESET);
+            refreshBuilderInputs();
+            updateConfiguredSize();
+        });
+
+        document.getElementById('btnBuildPool').addEventListener('click', () => {
+            if (app.getConfiguredSize() === 0) {
+                alert("Please add at least one card to the pool.");
+                return;
+            }
+            app.buildPool();
+            switchToActiveView();
+        });
+
+        // Active View Event Listeners
+        document.getElementById('btnDraw').addEventListener('click', handleDraw);
+
+        document.getElementById('btnResetSession').addEventListener('click', () => {
+            if(confirm("Are you sure you want to reset the session? Current pool and history will be lost.")) {
+                app.resetSession();
+                inputTokens.value = 1;
+                switchToBuilderView();
+            }
+        });
+
+        document.getElementById('btnIncTokens').addEventListener('click', () => {
+            inputTokens.value = parseInt(inputTokens.value || 0) + 1;
+        });
+
+        document.getElementById('btnDecTokens').addEventListener('click', () => {
+            const val = parseInt(inputTokens.value || 0);
+            if (val > 1) inputTokens.value = val - 1;
+        });
+    }
+
+    // Builder Functions
+    function renderBuilder() {
+        templateGrid.innerHTML = '';
+        Object.values(LOOT_TEMPLATES).forEach(tmpl => {
+            const div = document.createElement('div');
+            div.className = 'template-item';
+            div.innerHTML = `
+                <label for="in_${tmpl.id}">${tmpl.label}</label>
+                <input type="number" id="in_${tmpl.id}" min="0" value="0" data-id="${tmpl.id}">
+            `;
+            templateGrid.appendChild(div);
+
+            // Bind input change
+            const input = div.querySelector('input');
+            input.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value) || 0;
+                app.setCount(tmpl.id, val);
+                updateConfiguredSize();
+            });
+        });
+    }
+
+    function refreshBuilderInputs() {
+        const inputs = templateGrid.querySelectorAll('input');
+        inputs.forEach(input => {
+            const id = input.dataset.id;
+            input.value = app.composition[id];
+        });
+    }
+
+    function updateConfiguredSize() {
+        configuredSizeDisplay.textContent = app.getConfiguredSize();
+    }
+
+    // Active View Functions
+    function switchToActiveView() {
+        builderView.classList.add('hidden');
+        activeView.classList.remove('hidden');
+        inputTokens.value = 1;
+        drawError.classList.remove('visible');
+        updateActiveDisplay();
+    }
+
+    function switchToBuilderView() {
+        activeView.classList.add('hidden');
+        builderView.classList.remove('hidden');
+    }
+
+    function updateActiveDisplay() {
+        // Update total remaining
+        const total = app.pool.length;
+        remainingCountDisplay.textContent = total;
+
+        // Update counts table
+        const counts = app.getRemainingCounts();
+        statsTableBody.innerHTML = '';
+
+        // Filter to only show items that exist in the original composition (optional, or show all)
+        // Showing all active types is better.
+        Object.entries(counts).forEach(([id, count]) => {
+            // Only show rows if count > 0 or if it was part of the original composition?
+            // Spec says "Remaining loot counts table (per template)".
+            // Better to show all templates or just those with count > 0?
+            // To prevent UI jumping, let's show all templates defined in LOOT_TEMPLATES that had > 0 start count?
+            // Actually, showing all from LOOT_TEMPLATES is safest but long.
+            // Let's show only those where current count > 0.
+            if (count > 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${LOOT_TEMPLATES[id].label}</td><td>${count}</td>`;
+                statsTableBody.appendChild(tr);
+            }
+        });
+
+        if (total === 0) {
+             statsTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center">Pool is empty</td></tr>';
+        }
+
+        // Update Log
+        renderLog();
+
+        // Update Draw Button State
+        const btnDraw = document.getElementById('btnDraw');
+        const tokensToSpend = parseInt(inputTokens.value) || 1;
+        if (total === 0 || tokensToSpend > total) {
+            btnDraw.disabled = true;
+        } else {
+            btnDraw.disabled = false;
+        }
+    }
+
+    function renderLog() {
+        drawLogList.innerHTML = '';
+        if (app.log.length === 0) {
+            drawLogList.innerHTML = '<li class="empty-message">No draws yet.</li>';
+            return;
+        }
+
+        app.log.forEach(entry => {
+            const li = document.createElement('li');
+            li.className = 'log-entry';
+
+            const timeStr = new Date(entry.timestamp).toLocaleTimeString();
+            const cardsStr = entry.draws.map(id => LOOT_TEMPLATES[id].label).join(', ');
+
+            li.innerHTML = `
+                <span class="log-time">${timeStr}</span>
+                <span class="log-content">${cardsStr}</span>
+            `;
+            drawLogList.appendChild(li);
+        });
+    }
+
+    function handleDraw() {
+        const n = parseInt(inputTokens.value);
+        if (isNaN(n) || n < 1) {
+            showError("Please enter a valid number of tokens.");
+            return;
+        }
+
+        const result = app.draw(n);
+        if (!result.success) {
+            showError(result.error);
+        } else {
+            drawError.classList.remove('visible');
+            updateActiveDisplay();
+        }
+    }
+
+    function showError(msg) {
+        drawError.textContent = msg;
+        drawError.classList.add('visible');
+        setTimeout(() => {
+            drawError.classList.remove('visible');
+        }, 3000);
+    }
+
+    // Input validation for tokens
+    inputTokens.addEventListener('input', () => {
+        // Re-evaluate button state
+        updateActiveDisplay();
+    });
+
+    // Start
+    init();
+
+</script>
 </body>
 </html>
