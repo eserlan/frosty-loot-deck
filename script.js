@@ -565,10 +565,10 @@ function handleDraw() {
 
         drawOverlay.classList.remove('hidden');
 
-        // Auto-hide after 3 seconds if not clicked
+        // Auto-hide after 7 seconds if not clicked
         setTimeout(() => {
             drawOverlay.classList.add('hidden');
-        }, 3000);
+        }, 7000);
     }
 }
 
