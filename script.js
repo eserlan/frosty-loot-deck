@@ -144,6 +144,7 @@ class LootLogic {
                 }
             }
         }
+        this.save();
         return { success: true, warnings: warnings };
     }
 
@@ -167,6 +168,7 @@ class LootLogic {
             draws: drawnIds
         });
 
+        this.save();
         return { success: true, draws: drawnIds };
     }
 
@@ -210,6 +212,39 @@ class LootLogic {
     resetSession() {
         this.pool = [];
         this.log = [];
+        this.clearStorage();
+    }
+
+    save() {
+        const state = {
+            pool: this.pool,
+            log: this.log,
+            composition: this.composition,
+            isActive: true
+        };
+        localStorage.setItem(LootLogic.STORAGE_KEY, JSON.stringify(state));
+    }
+
+    load() {
+        const stored = localStorage.getItem(LootLogic.STORAGE_KEY);
+        if (stored) {
+            try {
+                const state = JSON.parse(stored);
+                if (state.isActive) {
+                    this.pool = state.pool || [];
+                    this.log = state.log || [];
+                    this.composition = state.composition || {};
+                    return true;
+                }
+            } catch (e) {
+                console.error("Failed to load state", e);
+            }
+        }
+        return false;
+    }
+
+    clearStorage() {
+        localStorage.removeItem(LootLogic.STORAGE_KEY);
     }
 
     clearCounts() {
@@ -227,6 +262,8 @@ class LootLogic {
         });
     }
 }
+
+LootLogic.STORAGE_KEY = 'lootDeckHelperState';
 
 // --- UI CONTROLLER ---
 
@@ -250,6 +287,11 @@ const drawError = document.getElementById('drawError');
 function init() {
     renderBuilder();
     updateConfiguredSize();
+
+    // Restore session if exists
+    if (app.load()) {
+        switchToActiveView();
+    }
 
     // Builder Event Listeners
     document.getElementById('btnPresetBlank').addEventListener('click', () => {
