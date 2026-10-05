@@ -120,8 +120,21 @@
             align-items: center;
         }
 
-        .template-item label {
+        .template-item label,
+        .template-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             font-weight: 500;
+        }
+
+        .template-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+            opacity: 0.85;
+            vertical-align: middle;
         }
 
         .template-item input[type="number"] {
@@ -174,18 +187,31 @@
         }
 
         .stepper-value {
-            width: 40px;
+            min-width: 44px;
+            max-width: 60px;
+            width: auto;
             text-align: center;
             font-size: 1.1rem;
             font-weight: 500;
-            user-select: none;
             outline: 2px solid transparent;
             border-radius: 2px;
-            transition: outline 0.2s;
+            transition: outline 0.2s, background-color 0.2s;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            -moz-appearance: textfield;
+            padding: 0 4px;
+        }
+
+        .stepper-value::-webkit-outer-spin-button,
+        .stepper-value::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         .stepper-value:focus {
             outline: 2px solid var(--primary-color);
+            background-color: var(--surface-alt);
         }
 
         .build-stats {
@@ -252,6 +278,21 @@
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-label-cell {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-icon {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+            opacity: 0.85;
+            vertical-align: middle;
         }
 
         th {

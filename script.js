@@ -27,10 +27,10 @@ const SUPPLY_DECK = {
     'money': {
         label: 'Money',
         cards: [
-            ...Array(1).fill('gold_1'),
+            ...Array(12).fill('gold_1'),
             ...Array(6).fill('gold_2'),
             ...Array(2).fill('gold_3')
-        ] // Total 9
+        ] // Total 20
     },
     'lumber': {
         label: 'Lumber',
@@ -57,17 +57,17 @@ const SUPPLY_DECK = {
 
 // UI Groups for the builder
 const BUILDER_GROUPS = [
-    { id: 'money', label: 'Money', type: 'random', max: 9 },
-    { id: 'lumber', label: 'Lumber', type: 'random', max: 8 },
-    { id: 'metal', label: 'Metal', type: 'random', max: 8 },
-    { id: 'hide', label: 'Hide', type: 'random', max: 7 },
-    { id: 'arrowvine', label: 'Arrowvine', type: 'direct' },
-    { id: 'axenut', label: 'Axenut', type: 'direct' },
-    { id: 'corpsecap', label: 'Corpsecap', type: 'direct' },
-    { id: 'flamefruit', label: 'Flamefruit', type: 'direct' },
-    { id: 'rockroot', label: 'Rockroot', type: 'direct' },
-    { id: 'snowthistle', label: 'Snowthistle', type: 'direct' },
-    { id: 'random_item', label: 'Random Item', type: 'direct' }
+    { id: 'money', label: 'Money', type: 'random', max: 99, icon: 'assets/icons/money.svg' },
+    { id: 'lumber', label: 'Lumber', type: 'random', max: 99, icon: 'assets/icons/lumber.svg' },
+    { id: 'metal', label: 'Metal', type: 'random', max: 99, icon: 'assets/icons/metal.svg' },
+    { id: 'hide', label: 'Hide', type: 'random', max: 99, icon: 'assets/icons/hide.svg' },
+    { id: 'arrowvine', label: 'Arrowvine', type: 'direct', max: 99, icon: 'assets/icons/arrowvine.svg' },
+    { id: 'axenut', label: 'Axenut', type: 'direct', max: 99, icon: 'assets/icons/axenut.svg' },
+    { id: 'corpsecap', label: 'Corpsecap', type: 'direct', max: 99, icon: 'assets/icons/corpsecap.svg' },
+    { id: 'flamefruit', label: 'Flamefruit', type: 'direct', max: 99, icon: 'assets/icons/flamefruit.svg' },
+    { id: 'rockroot', label: 'Rockroot', type: 'direct', max: 99, icon: 'assets/icons/rockroot.svg' },
+    { id: 'snowthistle', label: 'Snowthistle', type: 'direct', max: 99, icon: 'assets/icons/snowthistle.svg' },
+    { id: 'random_item', label: 'Random Item', type: 'direct', max: 99, icon: 'assets/icons/random_item.svg' }
 ];
 
 // Preset for Sample Demo Pool
@@ -119,29 +119,21 @@ class LootLogic {
                     this.pool.push(groupId);
                 }
             } else if (groupDef.type === 'random') {
-                // Random draw from supply
-                const supply = [...SUPPLY_DECK[groupId].cards]; // copy
+                // Random draw from supply deck (reshuffle fresh supply if count exceeds available cards)
+                const supplyDeck = SUPPLY_DECK[groupId].cards;
+                const cardsToDraw = [];
 
-                // Shuffle supply so that any subset or full usage is randomized
-                for (let i = supply.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [supply[i], supply[j]] = [supply[j], supply[i]];
+                while (cardsToDraw.length < count) {
+                    const deck = [...supplyDeck];
+                    for (let i = deck.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [deck[i], deck[j]] = [deck[j], deck[i]];
+                    }
+                    const needed = count - cardsToDraw.length;
+                    cardsToDraw.push(...deck.slice(0, needed));
                 }
 
-                // Shuffle supply
-                for (let i = supply.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [supply[i], supply[j]] = [supply[j], supply[i]];
-                }
-
-                if (count > supply.length) {
-                    showError(`Warning: You requested ${count} ${groupDef.label}, but only ${supply.length} are available. Using all available.`);
-                    // Add all available (now shuffled)
-                    this.pool.push(...supply);
-                } else {
-                    // Take top N from shuffled supply
-                    this.pool.push(...supply.slice(0, count));
-                }
+                this.pool.push(...cardsToDraw);
             }
         }
         this.save();
@@ -344,9 +336,22 @@ function renderBuilder() {
         div.className = 'template-item';
 
         const labelId = `label_${group.id}`;
+        const inputId = `input-${group.id}`;
         const label = document.createElement('label');
-        label.textContent = group.label;
-        label.htmlFor = `stepper-${group.id}`;
+        label.htmlFor = inputId;
+        label.className = 'template-label';
+
+        const labelText = document.createElement('span');
+        labelText.textContent = group.label;
+        label.appendChild(labelText);
+
+        if (group.icon) {
+            const iconImg = document.createElement('img');
+            iconImg.src = group.icon;
+            iconImg.alt = '';
+            iconImg.className = 'template-icon';
+            label.appendChild(iconImg);
+        }
 
         // Stepper Control
         const stepperDiv = document.createElement('div');
@@ -356,33 +361,36 @@ function renderBuilder() {
         const btnDec = document.createElement('button');
         btnDec.type = 'button';
         btnDec.className = 'stepper-btn';
-        btnDec.type = 'button';
         btnDec.textContent = '-';
         btnDec.disabled = true; // Initially 0
         btnDec.setAttribute('aria-label', `Decrease ${group.label}`);
 
-        const display = document.createElement('span');
+        const display = document.createElement('input');
+        display.type = 'number';
+        display.id = inputId;
+        display.name = group.id;
         display.className = 'stepper-value';
-        display.textContent = '0';
+        display.value = '0';
+        display.min = '0';
+        if (group.max) {
+            display.max = String(group.max);
+        }
         display.dataset.id = String(group.id);
-        display.setAttribute('role', 'status');
         display.setAttribute('aria-label', `${group.label} count`);
-        display.setAttribute('aria-live', 'polite');
-        display.setAttribute('tabindex', '0');
 
         const btnInc = document.createElement('button');
         btnInc.type = 'button';
         btnInc.className = 'stepper-btn';
-        btnInc.type = 'button';
         btnInc.textContent = '+';
         btnInc.setAttribute('aria-label', `Increase ${group.label}`);
 
         // Shared update function for value changes
         const updateValue = (newVal) => {
+            display.value = newVal;
             display.textContent = newVal;
             updateConfiguredSize();
             btnDec.disabled = (newVal <= 0);
-            btnInc.disabled = group.max && newVal >= group.max;
+            btnInc.disabled = Boolean(group.max && newVal >= group.max);
         };
 
         // Event Handlers
@@ -407,35 +415,30 @@ function renderBuilder() {
             updateValue(currentVal);
         });
 
-        // Keyboard support for the stepper value display
-        display.addEventListener('keydown', (e) => {
-            let currentVal = app.composition[group.id] || 0;
-            let newVal = currentVal;
+        // Direct input support for typing numbers
+        display.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value, 10);
+            if (isNaN(val) || val < 0) val = 0;
+            if (group.max && val > group.max) val = group.max;
+            app.setCount(group.id, val);
+            updateConfiguredSize();
+            btnDec.disabled = (val <= 0);
+            btnInc.disabled = Boolean(group.max && val >= group.max);
+        });
 
-            if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
-                e.preventDefault();
-                if (!group.max || currentVal < group.max) {
-                    newVal = currentVal + 1;
-                }
-            } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
-                e.preventDefault();
-                if (currentVal > 0) {
-                    newVal = currentVal - 1;
-                }
-            }
-
-            if (newVal !== currentVal) {
-                app.setCount(group.id, newVal);
-                updateValue(newVal);
-            }
+        display.addEventListener('change', (e) => {
+            let val = parseInt(e.target.value, 10);
+            if (isNaN(val) || val < 0) val = 0;
+            if (group.max && val > group.max) val = group.max;
+            updateValue(val);
         });
 
         // Keyboard navigation for display
         display.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+            if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 if (!btnInc.disabled) btnInc.click();
-            } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+            } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (!btnDec.disabled) btnDec.click();
             }
@@ -461,6 +464,7 @@ function refreshBuilderInputs() {
     displays.forEach(display => {
         const id = display.dataset.id;
         const newVal = app.composition[id] || 0;
+        display.value = newVal;
         display.textContent = newVal;
 
         // Also update button states (disable/enable)
@@ -519,7 +523,20 @@ function updateActiveDisplay() {
             const tdLabel = document.createElement('td');
             const tdCount = document.createElement('td');
 
-            tdLabel.textContent = label;
+            const group = BUILDER_GROUPS.find(g => g.label === label);
+            if (group && group.icon) {
+                const labelSpan = document.createElement('span');
+                labelSpan.textContent = label;
+                const iconImg = document.createElement('img');
+                iconImg.src = group.icon;
+                iconImg.alt = '';
+                iconImg.className = 'table-icon';
+                tdLabel.className = 'table-label-cell';
+                tdLabel.appendChild(labelSpan);
+                tdLabel.appendChild(iconImg);
+            } else {
+                tdLabel.textContent = label;
+            }
             tdCount.textContent = String(count);
 
             tr.appendChild(tdLabel);
